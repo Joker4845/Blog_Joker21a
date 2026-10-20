@@ -1,0 +1,52 @@
+# Git attributes for a Hugo blog developed on Windows and built on Linux.
+#
+# Why this file exists: the local machine runs Windows (core.autocrlf=true is
+# the Git-for-Windows default) while GitHub Actions builds on Ubuntu. Without
+# explicit rules, Git rewrites line endings on checkout/commit, which makes the
+# bytes that get built differ from the bytes that were committed. Declaring the
+# rules here makes the repository's normal form explicit and platform
+# independent, so a Windows checkout and a Linux build agree.
+#
+# NOTE: this affects *future* commits. Files already committed with CRLF keep
+# their bytes until they are re-added; see README-DEPLOY.md for the one-time
+# renormalisation step.
+
+# Normalise all text files to LF inside the repository.
+* text=auto eol=lf
+
+# Explicitly mark binary formats. These must never be newline-converted.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.avif  binary
+*.ico   binary
+*.svg   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.eot   binary
+*.zip   binary
+*.gz    binary
+*.mp4   binary
+*.webm  binary
+*.mp3   binary
+
+# Windows-only scripts must keep CRLF so cmd.exe and older tooling stay happy.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Unix-only scripts always LF, regardless of where they are checked out.
+*.sh   text eol=lf
+
+# Generated output is never committed.
+public/       export-ignore
+resources/    export-ignore
+
+# Keep GitHub's language statistics honest.
+public/**     linguist-generated=true
+resources/**  linguist-generated=true

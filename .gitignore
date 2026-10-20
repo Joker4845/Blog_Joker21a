@@ -1,0 +1,27 @@
+# Hugo build output — rebuilt by CI, never committed.
+/public/
+/resources/_gen/
+
+# Hugo's file cache.
+.hugo_build.lock
+
+# Node dependencies (Ziscus / Wrangler live here).
+node_modules/
+
+# Wrangler's local state and generated types.
+.wrangler/
+
+# Secrets. The Ziscus admin token and Cloudflare credentials must never be
+# committed; keep them in the environment or in GitHub Secrets instead.
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# OS and editor noise.
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/

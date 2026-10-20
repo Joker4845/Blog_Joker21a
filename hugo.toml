@@ -1,0 +1,49 @@
+# Hugo configuration.
+# Docs: https://gohugo.io/getting-started/configuration/
+
+baseURL = "https://example.pages.dev/"
+languageCode = "zh-cn"
+defaultContentLanguage = "zh-cn"
+title = "我的博客"
+theme = "ananke"
+
+# Emit an RSS feed and sitemap; Cloudflare Pages serves these as-is.
+enableRobotsTXT = true
+
+# Ananke reads these for author bylines and the footer.
+[params]
+  description = "一个用 Hugo 构建、部署在 Cloudflare Pages 上的博客"
+  author = "你的名字"
+  # Set to a full URL to show a logo, e.g. "/images/logo.png".
+  # Ananke omits the logo block when this is empty.
+  # logo = ""
+
+  # Ananke's main menu. The theme renders these in the header.
+  [[params.ananke_socials]]
+    name = "github"
+    url = "https://github.com/你的用户名"
+
+# Comment system. `enabled` stays false until Ziscus is actually deployed and
+# layouts/partials/comments.html has been replaced with the generated snippet.
+# Flipping this to true earlier would render a broken comment box.
+[params.ziscus]
+  enabled = false
+  # The Worker hostname that `npx ziscus deploy` prints, without a scheme.
+  # api-url = "ziscus.<your-subdomain>.workers.dev"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      # Lets you write raw HTML inside Markdown posts. Convenient, but note
+      # that it also means pasted HTML from untrusted sources is rendered.
+      unsafe = true
+  [markup.highlight]
+    noClasses = false
+    lineNos = false
+    tabWidth = 4
+
+# NOTE: no custom [outputs] block on purpose. Ananke's search/lunr feature needs
+# a JSON home output, but adding "JSON" without the matching layouts/index.json
+# template fails the build. Add both together if you want site search later.
+
+# Taxonomies stay at Hugo's defaults (tags, categories). Ananke shows both.

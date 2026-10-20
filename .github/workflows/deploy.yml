@@ -1,0 +1,49 @@
+name: Deploy Hugo site to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  # Ziscus calls this via repository_dispatch when a comment is approved, so
+  # the statically rendered comments refresh without a manual push.
+  repository_dispatch:
+    types: [ziscus-comment]
+  workflow_dispatch:
+
+# Only one deploy at a time; a newer push supersedes an in-flight build.
+concurrency:
+  group: pages-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Pulls in the theme, which is stored as a git submodule.
+          submodules: recursive
+          # Ananke uses .GitInfo for "last modified" dates, which needs history.
+          fetch-depth: 0
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          # Pinned rather than "latest": a new Hugo minor release can change
+          # template behaviour and break a build that was green yesterday.
+          hugo-version: "0.140.2"
+          extended: true
+
+      - name: Build
+        run: hugo --minify --gc
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name=${{ vars.BLOG_PROJECT_NAME }}
