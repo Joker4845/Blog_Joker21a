@@ -2,7 +2,8 @@
 # Docs: https://gohugo.io/getting-started/configuration/
 
 baseURL = "https://example.pages.dev/"
-languageCode = "zh-cn"
+# `languageCode` was deprecated in Hugo 0.158; `locale` replaces it.
+locale = "zh-CN"
 defaultContentLanguage = "zh-cn"
 title = "我的博客"
 theme = "ananke"
@@ -23,13 +24,20 @@ enableRobotsTXT = true
     name = "github"
     url = "https://github.com/你的用户名"
 
-# Comment system. `enabled` stays false until Ziscus is actually deployed and
-# layouts/partials/comments.html has been replaced with the generated snippet.
-# Flipping this to true earlier would render a broken comment box.
+# Comment system.
+#
+# Ananke v2 renders comments by including the partial named "commento.html"
+# (see themes/ananke/layouts/page/single.html), guarded by commentoEnable.
+# This blog overrides that partial at layouts/_partials/commento.html to render
+# Ziscus instead. Leaving commentoEnable false renders no comment section at
+# all, which is what we want until Ziscus is actually deployed.
+commentoEnable = false
+
 [params.ziscus]
   enabled = false
-  # The Worker hostname that `npx ziscus deploy` prints, without a scheme.
-  # api-url = "ziscus.<your-subdomain>.workers.dev"
+  # The Worker hostname that `npx ziscus deploy` prints, WITHOUT a scheme.
+  # Example: "ziscus.your-subdomain.workers.dev"
+  # api_url = ""
 
 [markup]
   [markup.goldmark]

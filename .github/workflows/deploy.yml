@@ -33,9 +33,11 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3
         with:
-          # Pinned rather than "latest": a new Hugo minor release can change
-          # template behaviour and break a build that was green yesterday.
-          hugo-version: "0.140.2"
+          # Pinned, not "latest": a new Hugo minor release can change template
+          # behaviour and break a build that was green yesterday.
+          # Must stay >= 0.160.0, which is Ananke v2's minimum (theme.toml).
+          # Keep in sync with the version installed locally.
+          hugo-version: "0.168.0"
           extended: true
 
       - name: Build

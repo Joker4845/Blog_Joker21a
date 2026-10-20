@@ -10,75 +10,83 @@
 
 ## 0. 当前状态
 
+**站点已经可以在本地构建和预览。** 实际验证结果：
+
+```
+hugo v0.168.0+extended windows/amd64
+hugo --minify --gc    → 18 pages, exit 0, 无警告
+hugo server           → 首页 200 / 文章页 200 / 代码块正常
+```
+
 已完成：
 
-- `hugo.toml` —— 站点配置（中文、Ananke 主题、标签/分类）
+- **Hugo 0.168.0 extended 已安装**到 `C:\Users\Redmi\tools\hugo\`，并写入用户 PATH
+- **Ananke v2.19.1 已安装**到 `themes\ananke\`（随仓库提交，非 submodule）
+- `hugo.toml` —— 站点配置（中文、标签/分类、评论区开关）
+- `layouts/_partials/commento.html` —— 覆盖主题的评论区（当前渲染为空）
 - `.gitattributes` —— 强制 LF + 二进制文件保护
 - `.gitignore` —— 排除 `public/`、`node_modules/`、密钥
 - `content/posts/hello.md` —— 示例文章
-- `layouts/partials/comments.html` —— 评论区占位模板（当前渲染为空）
 - `.github/workflows/deploy.yml` —— 自动构建部署工作流
 - 本地 git 仓库已初始化，分支 `main`，`core.autocrlf=false`
 
-未完成（需要网络或你的凭证）：
+未完成（需要你的账号权限）：
 
-- 安装 Hugo
-- 添加 Ananke 主题
 - 创建 Cloudflare Pages 项目
 - 部署 Ziscus 评论系统
-- 推送到 GitHub
+- 推送到 GitHub 并配置 Secrets
 
 ---
 
-## 1. 安装 Hugo Extended
+## 1. Hugo 安装（已完成，此处仅存档）
 
-**不要用 `winget`。** 本机实测 `winget` 无法工作（任何子命令都返回
-`0x8A150001` 内部错误，包括 `winget --version`），属于 winget 自身损坏，
-与本项目无关。
+**本机的 `winget` 是坏的** —— 任何子命令都返回 `0x8A150001` 内部错误，
+连 `winget --version` 都不行。如果以后想修，可以试：
 
-改用**手动下载**（最有把握，且不需要管理员权限）：
+- 「设置 → 应用 → 应用和功能」找到 **App Installer** → 高级选项 → 修复 / 重置；
+- 或以管理员身份运行 PowerShell：
+  ```powershell
+  Get-AppxPackage *DesktopAppInstaller* | Reset-AppxPackage
+  ```
+
+**已经装好的 Hugo 在当前版本**（无需重装）：
+
+```powershell
+hugo version
+# hugo v0.168.0+extended windows/amd64
+```
+
+若将来要重装或升级，手动下载是唯一可靠方式：
 
 1. 打开 <https://github.com/gohugoio/hugo/releases>；
-2. 找最新版的 **`hugo_extended_<版本>_windows-amd64.zip`**；
-   **必须选带 `extended` 的那个** —— 普通版缺少 SCSS 支持，Ananke 会用不了；
-3. 解压到一个固定目录，例如 `C:\Users\<你的用户名>\tools\hugo\`；
-4. 把该目录加入**用户** PATH（不需要管理员）：
+2. 下载 **`hugo_extended_<版本>_windows-amd64.zip`**；
+   **必须带 `extended`** —— 普通版没有 SCSS 支持，Ananke 会直接无法渲染样式；
+3. 解压后把 `hugo.exe` 放到 `C:\Users\<用户名>\tools\hugo\`；
+4. 该目录已在用户 PATH 中，重开终端即可生效。
+
+> **版本下限**：Ananke v2 的 `theme.toml` 要求 `min_version = "0.160.0"`。
+> 低于这个版本会构建失败，不要降级。
+
+## 2. 主题（已完成，此处仅存档）
+
+主题**不是** git submodule，而是把 Ananke v2.19.1 的发行版解压进
+`themes\ananke\` 并随仓库提交（约 1.2 MB）。
+
+这样做的原因：本机 git 到 `github.com:443` 的连接会被重置，`git submodule add`
+克隆不下来；而 `codeload.github.com` 可用。更重要的是，submodule 会让 CI 多一个
+失败点（忘了 `submodules: recursive`、或 GitHub 临时抽风就构建不出来），
+直接提交进去最稳。
+
+将来升级主题：
 
 ```powershell
-$hugoDir = "$env:USERPROFILE\tools\hugo"
-New-Item -ItemType Directory -Force -Path $hugoDir | Out-Null
-# 把 hugo.exe 解压到 $hugoDir 之后执行：
-$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($userPath -notlike "*$hugoDir*") {
-    [Environment]::SetEnvironmentVariable("Path", "$userPath;$hugoDir", "User")
-}
-$env:Path = "$env:Path;$hugoDir"   # 当前窗口立即生效
-hugo version
+curl.exe -L -o ananke.tar.gz https://codeload.github.com/gohugo-ananke/ananke/tar.gz/refs/tags/v2.19.1
+tar.exe -xzf ananke.tar.gz
+# 用解压出的目录内容替换 themes\ananke\
 ```
 
-`hugo version` 的输出里必须包含 **`extended`** 字样。
-
-> 备选：`npm install -g hugo-extended`（Node 已装，本机 `v24.20.0`）。
-> 这条路可行但**本次未能实际验证**（离线环境无法确认包状态），
-> 如果报 `EACCES` / `EPERM`，改用用户目录作为全局 prefix：
->
-> ```powershell
-> npm config set prefix "$env:APPDATA\npm-global"
-> $env:Path = "$env:APPDATA\npm-global;$env:Path"
-> npm install -g hugo-extended
-> ```
-
-## 2. 添加 Ananke 主题
-
-主题以 git submodule 形式引入，这样 GitHub Actions 的
-`submodules: recursive` 才能拉到它：
-
-```powershell
-git submodule add https://github.com/gohugo-ananke/ananke themes/ananke
-```
-
-Hugo 主题在 submodule 里**不要**加 `.gitattributes` 覆盖规则，本仓库根目录的
-规则已经够用。
+**注意**：Ananke v2 用的是 Hugo 新版目录规范 —— `layouts/_partials/`
+（带下划线），不是旧的 `layouts/partials/`。放错位置不会被加载，且不报错。
 
 ## 3. 本地构建验证
 
@@ -89,11 +97,10 @@ hugo --minify --gc
 产物在 `public\`。本地预览：
 
 ```powershell
-hugo server --bind 0.0.0.0 --port 1313
+hugo server --port 1313
 ```
 
-打开 <http://localhost:1313> 检查首页和示例文章。**这一步必须先通过**，
-再去动 Cloudflare，否则线上出问题很难定位是构建还是部署的锅。
+打开 <http://localhost:1313> 检查首页和示例文章。
 
 ---
 
@@ -136,20 +143,40 @@ npx ziscus deploy --site-url "https://$env:BLOG_PROJECT_NAME.pages.dev" --ssg hu
 ### 6.1 接入评论模板
 
 `npx ziscus deploy --ssg hugo` 会生成一段模板片段。**以 CLI 实际生成的为准**，
-把它覆盖写入：
+把它粘贴到下面这个文件里：
 
 ```
-layouts\partials\comments.html
+layouts\_partials\commento.html
 ```
 
-不要手写猜测 Ziscus 的渲染逻辑 —— 写错通常不报错，只是评论区静默消失。
-覆盖后把 `hugo.toml` 里的开关打开：
+> **路径很重要，别写错。** Ananke v2 用的是 Hugo 新版目录规范
+> **`layouts/_partials/`**（带下划线），不是旧的 `layouts/partials/`。
+> 放到旧路径不会有任何效果，而且**不报错**，只是评论区静默消失。
+
+**为什么覆盖的是 `commento.html` 而不是 `comments.html`：**
+主题的 `layouts/page/single.html` 里写死了：
+
+```go-html-template
+{{ if .Site.Params.commentoEnable }}
+  {{- partials.Include "commento.html" . -}}
+{{ end }}
+```
+
+主题只认这个名字。Hugo 的查找顺序是「站点 `layouts/` 优先于主题 `layouts/`」，
+所以在站点侧放同名文件即可覆盖主题自带的 Commento 实现，
+既不用改主题源码，也不用维护 fork。
+
+粘贴片段后，把 `hugo.toml` 里两处开关都打开：
 
 ```toml
+commentoEnable = true          # Ananke 的开关，控制是否渲染评论区
+
 [params.ziscus]
   enabled = true
-  api-url = "ziscus.<你的子域>.workers.dev"
+  api_url = "ziscus.<你的子域>.workers.dev"   # 不带 https://
 ```
+
+改完先本地验证：`hugo server`，确认文章底部出现评论框，再推送。
 
 ### 6.2 检查 ALLOWED_ORIGINS
 
@@ -240,15 +267,19 @@ git push
 
 | 症状 | 原因与处理 |
 |---|---|
-| `winget` 任何命令都失败 | 本机 winget 已损坏（`0x8A150001`）；改用 npm 安装 Hugo |
-| `hugo` 找不到命令 | PATH 未刷新；关闭重开 PowerShell，或手动把 `hugo.exe` 目录加入用户 PATH |
-| `npm install -g` 报 `EACCES`/`EPERM` | 全局目录权限受限；按第 1 节改 prefix 到用户目录，或直接用 `npx` |
-| 线上样式全丢 | submodule 没拉下来；确认 checkout 步骤有 `submodules: recursive`，以及主题已提交 |
+| `winget` 任何命令都失败 | 本机 winget 已损坏（`0x8A150001`）；见第 1 节的修复方法，Hugo 改用手动下载安装 |
+| `hugo` 找不到命令 | PATH 未刷新；关闭重开 PowerShell。Hugo 已在 `%USERPROFILE%\tools\hugo\` |
+| 构建报 `min_version` 错误 | Hugo 版本低于 0.160.0（Ananke v2 的下限）；升级 Hugo |
+| 线上样式全丢 / SCSS 报错 | 装成了非 extended 版 Hugo；必须是 `extended` |
+| 评论区完全不出现 | 模板放错目录了。必须是 **`layouts\_partials\commento.html`**（带下划线），不是 `layouts\partials\comments.html`。放错不报错 |
+| 评论区不出现（模板已放对） | `hugo.toml` 里 `commentoEnable` 和 `params.ziscus.enabled` **两个**都要为 `true` |
+| `git submodule` 拉不下来 | 本机到 `github.com:443` 会被重置；主题已改为随仓库提交，不需要 submodule |
+| `npm install -g` 报 `EACCES`/`EPERM` | 全局目录权限受限；改 prefix 到用户目录，或直接用 `npx` |
 | 图片裂开 / 损坏 | 历史提交里被 CRLF 转换过；见下方「换行符」一节 |
 | `wrangler pages deploy` 权限不足 | Token 缺 `Cloudflare Pages: Edit`，或 `CLOUDFLARE_ACCOUNT_ID` 没设 |
 | 评论提交 CORS 报错 | `ALLOWED_ORIGINS` 必须精确等于 `*.pages.dev` 主机名，不带协议/路径/通配符 |
 | 新评论不显示 | Ziscus 是构建时渲染；确认 `--github-repo` 配好且能触发 `repository_dispatch` |
-| 构建报 Hugo 版本相关错误 | 工作流里 Hugo 版本是**固定**的（`0.140.2`），可手动升级这一行 |
+| 构建报 Hugo 版本相关错误 | 工作流里 Hugo 版本是**固定**的（`0.168.0`）；与本地保持一致再改 |
 
 ### 关于换行符（重要）
 
