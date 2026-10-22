@@ -13,11 +13,8 @@ enableRobotsTXT = true
 
 # Ananke reads these for author bylines and the footer.
 [params]
-  description = "一个用 Hugo 构建、部署在 Cloudflare Pages 上的博客"
-  author = "你的名字"
-  # Set to a full URL to show a logo, e.g. "/images/logo.png".
-  # Ananke omits the logo block when this is empty.
-  # logo = ""
+  description = "记录技术，也记录生活。"
+  author = "Joker"
 
   # Comment system.
   #
@@ -30,6 +27,12 @@ enableRobotsTXT = true
   # resolves to nil and the comment partial is never called.
   commentoEnable = true
 
+  # Sort section list pages newest-first. Hugo defaults to date-desc already;
+  # stating it explicitly keeps the archive order obvious.
+  [params.ananke]
+    [params.ananke.pages]
+      show_list_images = false
+
   # Ananke's main menu. The theme renders these in the header.
   [[params.ananke_socials]]
     name = "github"
@@ -40,6 +43,27 @@ enableRobotsTXT = true
     # The deployed Worker endpoint. The generated layouts/_partials/ziscus.html
     # reads `.Site.Params.ziscus.endpoint`, so keep this key name in sync.
     endpoint = "https://ziscus-comments.gentle-math-b39e.workers.dev"
+
+# Top navigation. Two content sections plus the archive.
+[[menu.main]]
+  name = "技术文章"
+  pageRef = "/tech"
+  weight = 10
+
+[[menu.main]]
+  name = "随笔"
+  pageRef = "/essays"
+  weight = 20
+
+[[menu.main]]
+  name = "归档"
+  pageRef = "/archives"
+  weight = 30
+
+[[menu.main]]
+  name = "标签"
+  pageRef = "/tags"
+  weight = 40
 
 [markup]
   [markup.goldmark]

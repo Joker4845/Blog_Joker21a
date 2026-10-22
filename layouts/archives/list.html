@@ -1,0 +1,49 @@
+{{ define "main" }}
+{{/*
+  Archive page: every regular page on the site, grouped by year then month.
+
+  Why this exists: the two sections (/tech and /essays) each show only their
+  own posts, so there is no single place to see everything in one timeline.
+  This layout fills that gap.
+
+  `.Site.RegularPages` covers all sections; `.Site.Pages` would also pull in
+  section and taxonomy landing pages, which do not belong in a post archive.
+*/}}
+
+{{- $pages := where .Site.RegularPages "Section" "in" (slice "tech" "essays") -}}
+{{- $pages = $pages.ByDate.Reverse -}}
+
+<article class="pa3 pa4-ns nested-copy-line-height">
+  <section class="cf ph3 ph5-l pv3 pv4-l f4 tc-l center measure-wide lh-copy nested-links {{ $.Param "text_color" | compare.Default "mid-gray" }}">
+    {{- .Content -}}
+  </section>
+
+  {{- /* Group by year (descending), then by month within each year. */ -}}
+  {{- range $pages.GroupByDate "2006" -}}
+    {{- $year := .Key -}}
+    <section class="ph3 ph5-l mw8 center mb5">
+      <h2 class="f2 fw6 mb3 pb2 bt b--black-10 pt3">{{ $year }} 年</h2>
+
+      {{- range .Pages.GroupByDate "1月" -}}
+        <div class="mb4">
+          <h3 class="f5 fw5 mb2 silver ttu tracked">{{ .Key }}</h3>
+          <ul class="list pl0 ml0">
+            {{- range .Pages -}}
+              <li class="flex-ns justify-between pv1 bb b--black-05">
+                <a href="{{ .RelPermalink }}" class="link dark-gray dim f4">{{ .Title }}</a>
+                <time class="f6 silver nowrap ml3" datetime="{{ .Date.Format "2006-01-02" }}">
+                  {{ .Date.Format "01-02" }}
+                </time>
+              </li>
+            {{- end -}}
+          </ul>
+        </div>
+      {{- end -}}
+    </section>
+  {{- end -}}
+
+  {{- if not $pages -}}
+    <p class="tc silver">还没有文章。</p>
+  {{- end -}}
+</article>
+{{ end }}
