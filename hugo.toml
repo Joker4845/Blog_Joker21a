@@ -1,7 +1,7 @@
 # Hugo configuration.
 # Docs: https://gohugo.io/getting-started/configuration/
 
-baseURL = "https://example.pages.dev/"
+baseURL = "https://my-blog-t3l.pages.dev/"
 # `languageCode` was deprecated in Hugo 0.158; `locale` replaces it.
 locale = "zh-CN"
 defaultContentLanguage = "zh-cn"
@@ -19,25 +19,27 @@ enableRobotsTXT = true
   # Ananke omits the logo block when this is empty.
   # logo = ""
 
+  # Comment system.
+  #
+  # NOTE ON ORDER: this key must appear BEFORE the [[params.ananke_socials]]
+  # array below. TOML treats `[[table]]` as opening an array of tables, and
+  # every following key/value belongs to that array's last element until a new
+  # table header appears. Declared after it, `commentoEnable` silently becomes
+  # a field of the socials entry instead of a [params] key, so
+  # `.Site.Params.commentoEnable` — the expression Ananke's single.html tests —
+  # resolves to nil and the comment partial is never called.
+  commentoEnable = true
+
   # Ananke's main menu. The theme renders these in the header.
   [[params.ananke_socials]]
     name = "github"
-    url = "https://github.com/你的用户名"
+    url = "https://github.com/Joker4845"
 
-# Comment system.
-#
-# Ananke v2 renders comments by including the partial named "commento.html"
-# (see themes/ananke/layouts/page/single.html), guarded by commentoEnable.
-# This blog overrides that partial at layouts/_partials/commento.html to render
-# Ziscus instead. Leaving commentoEnable false renders no comment section at
-# all, which is what we want until Ziscus is actually deployed.
-commentoEnable = false
-
-[params.ziscus]
-  enabled = false
-  # The Worker hostname that `npx ziscus deploy` prints, WITHOUT a scheme.
-  # Example: "ziscus.your-subdomain.workers.dev"
-  # api_url = ""
+  [params.ziscus]
+    enabled = true
+    # The deployed Worker endpoint. The generated layouts/_partials/ziscus.html
+    # reads `.Site.Params.ziscus.endpoint`, so keep this key name in sync.
+    endpoint = "https://ziscus-comments.gentle-math-b39e.workers.dev"
 
 [markup]
   [markup.goldmark]

@@ -1,0 +1,55 @@
+{{- $endpoint := .Site.Params.ziscus.endpoint -}}
+{{- $slug := "" -}}
+{{- with .File -}}
+  {{- $slug = .ContentBaseName | urlize -}}
+{{- else -}}
+  {{- $slug = .Page.Title | urlize -}}
+{{- end -}}
+{{- /* NOTE: `hugo.Data` replaced the deprecated `.Site.Data` in Hugo 0.156.
+       The generated form still works but emits a deprecation warning on every
+       build. This reads optional pre-fetched data written by
+       `npx ziscus fetch`; when no such file exists the slice is empty and the
+       form below handles posting. */ -}}
+{{- $comments := index hugo.Data "comments" $slug | default (slice) -}}
+
+<div class="ziscus">
+  <style>.ziscus { --zc-text: #1a1a1a; --zc-bg: #fff; --zc-border: #e0e0e0; --zc-muted: #6b6b6b; }
+.ziscus { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--zc-border); }
+.ziscus h2 { font-size: 1.2rem; margin-bottom: 1rem; color: var(--zc-text); }
+.ziscus-comment { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--zc-border); }
+.ziscus-header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 0.25rem; }
+.ziscus-author { font-weight: bold; color: var(--zc-text); }
+.ziscus-time { font-size: 0.85rem; color: var(--zc-muted); }
+.ziscus-body { margin: 0; color: var(--zc-text); }
+.ziscus-form { margin-top: 1.5rem; }
+.ziscus-form label { display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: var(--zc-muted); }
+.ziscus-form input, .ziscus-form textarea { width: 100%; padding: 0.5rem; margin-bottom: 0.75rem; border: 1px solid var(--zc-border); background: var(--zc-bg); color: var(--zc-text); font: inherit; box-sizing: border-box; }
+.ziscus-form textarea { resize: vertical; }
+.ziscus-form button { padding: 0.5rem 1.25rem; border: 1px solid var(--zc-border); background: var(--zc-text); color: var(--zc-bg); font: inherit; cursor: pointer; min-height: 44px; }
+.ziscus-form button:hover { opacity: 0.85; }</style>
+
+  {{ if $comments }}
+  <h2>{{ len $comments }} Comment{{ if ne (len $comments) 1 }}s{{ end }}</h2>
+  {{ range $comments }}
+  <article class="ziscus-comment">
+    <header class="ziscus-header">
+      <strong class="ziscus-author">{{ .author }}</strong>
+      <time class="ziscus-time" datetime="{{ .created_at }}">{{ dateFormat "January 2, 2006" .created_at }}</time>
+    </header>
+    <p class="ziscus-body">{{ .body }}</p>
+  </article>
+  {{ end }}
+  {{ else }}
+  <h2>Comments</h2>
+  <p>No comments yet.</p>
+  {{ end }}
+
+  <form method="POST" action="{{ $endpoint }}/submit" class="ziscus-form">
+    <input type="hidden" name="slug" value="{{ $slug }}">
+    <div><label for="ziscus-author">Name</label>
+    <input type="text" name="author" id="ziscus-author" required></div>
+    <div><label for="ziscus-body">Comment</label>
+    <textarea name="body" id="ziscus-body" rows="4" required></textarea></div>
+    <button type="submit">Post Comment</button>
+  </form>
+</div>

@@ -1,0 +1,5 @@
+{
+  "endpoint": "https://ziscus-comments.placeholder.workers.dev",
+  "ssg": "hugo",
+  "theme": "light"
+}

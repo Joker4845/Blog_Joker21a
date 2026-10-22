@@ -1,0 +1,15 @@
+﻿name = "ziscus-comments"
+main = "worker.ts"
+compatibility_date = "2025-09-27"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ziscus-comments"
+database_id = "b25fd41b-57b7-4868-b6d6-8f079466dbc0"
+
+[vars]
+ALLOWED_ORIGINS = "my-blog-t3l.pages.dev"   # comma-separated hosts allowed to POST /submit
+MODERATION = "off"                  # "on" holds new comments for review
+RATE_LIMIT = "30"                   # comments per IP per hour
+GITHUB_REPO = "Joker4845/Blog_Joker21a"             # receives repository_dispatch rebuild triggers
+

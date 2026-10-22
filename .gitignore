@@ -10,6 +10,17 @@ node_modules/
 
 # Wrangler's local state and generated types.
 .wrangler/
+.wrangler-cache/
+
+# npm cache. Relocated into the repo to work around an EPERM error writing to
+# the default %LOCALAPPDATA%\npm-cache; it is large and machine-specific.
+.npm-cache/
+.npmrc
+
+# Local scratch files used while setting the project up.
+.tmp-*
+_inspect.js
+_check.js
 
 # Secrets. The Ziscus admin token and Cloudflare credentials must never be
 # committed; keep them in the environment or in GitHub Secrets instead.
