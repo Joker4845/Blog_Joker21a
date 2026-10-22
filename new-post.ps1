@@ -216,6 +216,12 @@ if ($imageMarkdown.Count -gt 0) {
   $body += "`n"
 }
 
+# Write UTF-8 without BOM and with LF endings, matching the repo's
+# `.gitattributes` rule (`* text=auto eol=lf`). PowerShell here-strings use the
+# platform newline, which is CRLF on Windows, so normalise before writing;
+# otherwise git warns about CRLF on every single new post.
+$body = $body -replace "`r`n", "`n"
+
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($IndexFile, $body, $utf8NoBom)
 Write-Ok "文章：content/$Category/$Slug/index.md"
@@ -243,10 +249,14 @@ if ($body -match '(?m)^draft:\s*true') {
 
 Push-Location $RepoRoot
 try {
-  & $Git add -A | Out-Null
+  # git writes progress and warnings to stderr even when it succeeds, and
+  # PowerShell turns native stderr into a red NativeCommandError. Route the
+  # streams into the pipeline and trust the exit code instead.
+  & $Git add -A 2>&1 | Out-Null
   $msg = "post: $Title"
   & $Git -c user.name="blog" -c user.email="blog@local" commit -q -m $msg 2>&1 | Out-Null
-  if ($LASTEXITCODE -ne 0) {
+  $committed = ($LASTEXITCODE -eq 0)
+  if (-not $committed) {
     Write-Warn2 "没有可提交的改动（内容与上次相同）"
   } else {
     Write-Ok "已提交 $draftNote"
@@ -256,9 +266,10 @@ try {
     Write-Step "推送中…"
     $ok = $false
     for ($i = 1; $i -le 6; $i++) {
-      $out = & $Git push origin main 2>&1 | Out-String
+      $ErrorActionPreference = 'Continue'
+      & $Git push origin main 2>&1 | Out-Null
       if ($LASTEXITCODE -eq 0) { $ok = $true; break }
-      # github.com occasionally resets the connection; retry a few times.
+      # github.com occasionally resets the connection mid-transfer; retry.
       Start-Sleep -Seconds 6
     }
     if ($ok) {
