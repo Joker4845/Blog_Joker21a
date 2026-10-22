@@ -5,14 +5,18 @@
 {{- else -}}
   {{- $slug = .Page.Title | urlize -}}
 {{- end -}}
-{{- /* NOTE: `hugo.Data` replaced the deprecated `.Site.Data` in Hugo 0.156.
-       The generated form still works but emits a deprecation warning on every
-       build. This reads optional pre-fetched data written by
-       `npx ziscus fetch`; when no such file exists the slice is empty and the
-       form below handles posting. */ -}}
+{{- /* Comments are fetched at runtime from the Worker's GET /comments/<slug>
+       endpoint. They are deliberately NOT read from build-time data: Ziscus's
+       Worker is a reverse proxy that injects comments into HTML it serves
+       itself, and a statically built Hugo page never passes through it. So the
+       page has to ask for the comments, and re-ask after a successful post.
+
+       `hugo.Data` replaced the deprecated `.Site.Data` in Hugo 0.156. If you
+       later run `npx ziscus fetch` to bake comments in at build time, this
+       slice is where they arrive. */ -}}
 {{- $comments := index hugo.Data "comments" $slug | default (slice) -}}
 
-<div class="ziscus">
+<div class="ziscus" data-endpoint="{{ $endpoint }}" data-slug="{{ $slug }}">
   <style>.ziscus { --zc-text: #1a1a1a; --zc-bg: #fff; --zc-border: #e0e0e0; --zc-muted: #6b6b6b; }
 .ziscus { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--zc-border); }
 .ziscus h2 { font-size: 1.2rem; margin-bottom: 1rem; color: var(--zc-text); }
@@ -28,21 +32,25 @@
 .ziscus-form button { padding: 0.5rem 1.25rem; border: 1px solid var(--zc-border); background: var(--zc-text); color: var(--zc-bg); font: inherit; cursor: pointer; min-height: 44px; }
 .ziscus-form button:hover { opacity: 0.85; }</style>
 
-  {{ if $comments }}
-  <h2>{{ len $comments }} Comment{{ if ne (len $comments) 1 }}s{{ end }}</h2>
-  {{ range $comments }}
-  <article class="ziscus-comment">
-    <header class="ziscus-header">
-      <strong class="ziscus-author">{{ .author }}</strong>
-      <time class="ziscus-time" datetime="{{ .created_at }}">{{ dateFormat "January 2, 2006" .created_at }}</time>
-    </header>
-    <p class="ziscus-body">{{ .body }}</p>
-  </article>
-  {{ end }}
-  {{ else }}
-  <h2>Comments</h2>
-  <p>No comments yet.</p>
-  {{ end }}
+  {{/* Server-rendered comments. Present only when `ziscus fetch` has baked
+       data in; the script below replaces this block when it is empty. */}}
+  <div class="ziscus-list">
+    {{ if $comments }}
+    <h2>{{ len $comments }} Comment{{ if ne (len $comments) 1 }}s{{ end }}</h2>
+    {{ range $comments }}
+    <article class="ziscus-comment">
+      <header class="ziscus-header">
+        <strong class="ziscus-author">{{ .author }}</strong>
+        <time class="ziscus-time" datetime="{{ .created_at }}">{{ dateFormat "January 2, 2006" .created_at }}</time>
+      </header>
+      <p class="ziscus-body">{{ .body }}</p>
+    </article>
+    {{ end }}
+    {{ else }}
+    <h2>Comments</h2>
+    <p class="ziscus-empty">Loading comments…</p>
+    {{ end }}
+  </div>
 
   <form method="POST" action="{{ $endpoint }}/submit" class="ziscus-form">
     <input type="hidden" name="slug" value="{{ $slug }}">
@@ -52,4 +60,65 @@
     <textarea name="body" id="ziscus-body" rows="4" required></textarea></div>
     <button type="submit">Post Comment</button>
   </form>
+
+  <script>
+  /* Fetch and render approved comments.
+   *
+   * Needed because this Hugo page is static: the Ziscus Worker only injects
+   * comments into pages it serves itself, and a static page never passes
+   * through it. POST /submit replies with a 303 back to this page, so the
+   * freshly posted comment appears on the reload via this same fetch.
+   *
+   * Loaded inline and self-contained so it survives --minify and needs no
+   * extra asset pipeline. Progressive enhancement: with JS disabled the form
+   * still posts successfully, the list just stays empty.
+   */
+  (function () {
+    var root = document.currentScript.closest('.ziscus');
+    if (!root) return;
+    var endpoint = root.dataset.endpoint;
+    var slug = root.dataset.slug;
+    var list = root.querySelector('.ziscus-list');
+    if (!endpoint || !slug || !list) return;
+
+    var esc = function (s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    };
+
+    var fmt = function (iso) {
+      var d = new Date(iso);
+      if (isNaN(d)) return '';
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    };
+
+    var render = function (comments) {
+      var h = '<h2>' + comments.length + ' Comment' + (comments.length === 1 ? '' : 's') + '</h2>';
+      if (!comments.length) {
+        h += '<p class="ziscus-empty">No comments yet.</p>';
+      } else {
+        // Newest first, matching what a reader expects after posting.
+        comments.slice().reverse().forEach(function (c) {
+          h += '<article class="ziscus-comment">' +
+                 '<header class="ziscus-header">' +
+                   '<strong class="ziscus-author">' + esc(c.author) + '</strong>' +
+                   '<time class="ziscus-time" datetime="' + esc(c.created_at) + '">' + esc(fmt(c.created_at)) + '</time>' +
+                 '</header>' +
+                 '<p class="ziscus-body">' + esc(c.body) + '</p>' +
+               '</article>';
+        });
+      }
+      list.innerHTML = h;
+    };
+
+    fetch(endpoint + '/comments/' + encodeURIComponent(slug))
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(render)
+      .catch(function (e) {
+        console.error('Ziscus: could not load comments', e);
+        list.innerHTML = '<h2>Comments</h2><p class="ziscus-empty">Could not load comments.</p>';
+      });
+  })();
+  </script>
 </div>
