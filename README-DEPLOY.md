@@ -39,15 +39,15 @@ D1 读写              → 写入 changes:1，读回记录正常
 
 ### 部署已全部完成
 
-推送和 Actions 密钥都已配置好，**日常发布只剩改文章 + push**：
+推送和 Actions 密钥都已配置好，**日常发布只剩写文章 + push**：
 
 ```powershell
 cd C:\Users\Redmi\Codex\blog
-# 写新文章：hugo new content posts/my-post.md
-git add -A
-git commit -m "post: 新文章"
-git push
+.\new-post.ps1 tech "文章标题" -Slug my-post   # 技术文章
+.\new-post.ps1 essays "随笔标题" -Slug my-note # 随笔
 ```
+
+脚本会自动建文件、提交、推送。详见第 9 节。
 
 push 后 GitHub Actions 会自动构建并部署到 Cloudflare Pages，
 约 1 分钟生效。也可以在仓库 **Actions → Deploy Hugo site to Cloudflare Pages
@@ -305,16 +305,91 @@ gh run watch
 
 ## 9. 日常写作
 
+内容分两个板块：**技术文章** 放 `content/tech/`，**随笔** 放 `content/essays/`。
+访问地址分别是 `/tech/...` 和 `/essays/...`，首页导航可直接进入。
+`/archives/` 按年月汇总全部文章。
+
+### 9.1 用脚本（推荐）
+
 ```powershell
-hugo new content posts/文章标题.md
-# 编辑 content\posts\文章标题.md，把 draft 改成 false
+# 技术文章，纯文字
+.\new-post.ps1 tech "Hugo 图片处理" -Slug hugo-images
+
+# 随笔，带两张图
+.\new-post.ps1 essays "周末爬山" -Slug weekend-hike -Images .\1.jpg,.\2.jpg
+
+# 图片多的时候用通配符，再加标签
+.\new-post.ps1 tech "部署实录" -Slug deploy-log -Images .\shots\*.png -Tags "Cloudflare,D1"
+```
+
+脚本会创建 `content/<板块>/<slug>/` 文件夹、把图片复制进去、生成插图语法，
+然后自动提交推送。之后只要编辑 `index.md`、把 `draft: true` 改成 `false`
+再 `git push` 即可。
+
+参数说明：
+
+| 参数 | 说明 |
+|---|---|
+| `-Slug` | URL 短名。**中文标题一定要指定**，否则会退化成 `post-20260101-120000` 这种名字 |
+| `-Images` | 图片路径，逗号分隔或通配符都行 |
+| `-Tags` | 标签，逗号分隔 |
+| `-NoPush` | 只提交不推送（想先本地预览时用） |
+| `-NoCommit` | 只建文件，不碰 git |
+
+如果提示「禁止运行脚本」，加 Bypass：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\new-post.ps1 tech "标题" -Slug my-post
+```
+
+### 9.2 手动做
+
+```powershell
+# 1. 建文件夹（文件夹名就是 URL）
+mkdir content\tech\my-post
+
+# 2. 在文件夹里放图片，然后新建 index.md
+#    图片用相对路径引用即可，不用管 URL 前缀
+```
+
+`content\tech\my-post\index.md`：
+
+```markdown
+---
+title: "文章标题"
+date: 2026-01-01T10:00:00+08:00
+draft: false
+tags: ["Hugo"]
+---
+
+正文。
+
+![示意图](pic.png)
+```
+
+同目录放 `pic.png`，部署后地址是 `/tech/my-post/pic.png`，相对路径自动对。
+
+```powershell
 git add -A
 git commit -m "post: 文章标题"
 git push
 ```
 
 不需要手动跑 `hugo` 或 `wrangler`，GitHub Actions 会自动构建部署。
-图片放 `static\images\`，用 `/images/xxx.png` 引用。
+
+### 9.3 关于图片
+
+**图片和文章放同一个文件夹**（文章文件夹形式），Markdown 里写 `![说明](pic.png)`。
+好处是图文一起搬、一起改名，不会断链。
+
+也可以沿用老办法：图片放 `static\images\`，引用写 `/images/xxx.png`。
+这种方式两张图放一起，**要空行隔开**，否则会挤在一行：
+
+```markdown
+![图一](a.png)
+
+![图二](b.png)
+```
 
 ---
 
@@ -333,6 +408,9 @@ git push
 | 图片裂开 / 损坏 | 历史提交里被 CRLF 转换过；见下方「换行符」一节 |
 | `wrangler pages deploy` 权限不足 | Token 缺 `Cloudflare Pages: Edit`，或 `CLOUDFLARE_ACCOUNT_ID` 没设 |
 | 评论提交 CORS 报错 | `ALLOWED_ORIGINS` 必须精确等于 `*.pages.dev` 主机名，不带协议/路径/通配符 |
+| 运行 `new-post.ps1` 报语法错误 / 中文变乱码 | 脚本必须存成 **UTF-8 带 BOM**。PowerShell 5.1 没有 BOM 时会按 GBK 读 `.ps1`，中文注释直接变成语法错误 |
+| 新文章推送后没出现 | `draft` 还是 `true`；改成 `false` 再推 |
+| 中文标题的 URL 很丑 | 加 `-Slug english-name` 指定英文短名 |
 | 新评论不显示 | Ziscus 是构建时渲染；确认 `--github-repo` 配好且能触发 `repository_dispatch` |
 | 构建报 Hugo 版本相关错误 | 工作流里 Hugo 版本是**固定**的（`0.168.0`）；与本地保持一致再改 |
 
