@@ -156,7 +156,11 @@ if ($Images) {
   # Resolve wildcards and relative paths against the ORIGINAL working directory,
   # because we already moved to the repo root.
   $resolved = @()
-  foreach ($pattern in $Images) {
+  # `-Images a.png,b.png` arrives as ONE string when the script is launched with
+  # `powershell -File`, but as a real array when dot-sourced. Split on commas so
+  # both invocation styles behave the same.
+  $patterns = $Images | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+  foreach ($pattern in $patterns) {
     $items = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue
     if ($items) { $resolved += $items }
     else { Write-Warn2 "找不到图片，已跳过：$pattern" }
@@ -195,26 +199,26 @@ if ($Tags) {
 
 $date = (Get-Date).ToString('yyyy-MM-ddTHH:mm:sszzz')
 
-# UTF-8 WITHOUT BOM: Hugo tolerates a BOM, but it also ends up inside the
-# rendered front matter and can break strict YAML parsers.
-$frontMatter = @"
----
-title: "$Title"
-date: $date
-draft: true
-description: ""
-$tagLine
----
+# Build the front matter line by line so that omitting -Tags leaves no blank
+# line behind. A blank line inside the YAML block is harmless but looks sloppy.
+$fm = @(
+  '---'
+  "title: `"$Title`""
+  "date: $date"
+  'draft: true'
+  'description: ""'
+)
+if ($tagLine) { $fm += $tagLine }
+$fm += '---'
 
-在这里写正文。
-
-"@
-
-$body = $frontMatter
+$parts = @(($fm -join "`n"), '', '在这里写正文。')
 if ($imageMarkdown.Count -gt 0) {
-  $body += ($imageMarkdown -join "`n`n")
-  $body += "`n"
+  # A blank line BETWEEN each image, otherwise Markdown treats consecutive
+  # lines as one paragraph and renders the images side by side.
+  $parts += ''
+  $parts += ($imageMarkdown -join "`n`n")
 }
+$body = ($parts -join "`n").TrimEnd() + "`n"
 
 # Write UTF-8 without BOM and with LF endings, matching the repo's
 # `.gitattributes` rule (`* text=auto eol=lf`). PowerShell here-strings use the
