@@ -28,6 +28,8 @@ hugo --minify --gc   → 18 pages, exit 0, 无警告
 线上首页/文章页      → HTTP 200
 线上评论表单         → 渲染正常，endpoint 与 slug 正确
 CSS 完整性校验       → SRI 哈希与页面声明一致
+GitHub Actions       → push 与 workflow_dispatch 均 success
+D1 读写              → 写入 changes:1，读回记录正常
 ```
 
 > **域名注意**：Pages 项目在控制台叫 `my-blog`，但实际域名是
@@ -35,39 +37,34 @@ CSS 完整性校验       → SRI 哈希与页面声明一致
 > 凡涉及域名的地方（`baseURL`、Ziscus 的 `ALLOWED_ORIGINS`）
 > 都必须用带 `-t3l` 的全名，否则提交评论会报 CORS 错误。
 
-### 还剩两件事
+### 部署已全部完成
 
-**① 推送到 GitHub**（需要你的凭据）
-
-本地已有 3 个 commit、315 个文件，remote 已配置好，只差推送：
+推送和 Actions 密钥都已配置好，**日常发布只剩改文章 + push**：
 
 ```powershell
 cd C:\Users\Redmi\Codex\blog
-git push -u origin main
+# 写新文章：hugo new content posts/my-post.md
+git add -A
+git commit -m "post: 新文章"
+git push
 ```
 
-会弹出浏览器让你登录 GitHub 授权（Git Credential Manager）。授权后即完成。
-若仓库里已有内容（例如初始化时勾选了 README），先拉再推：
+push 后 GitHub Actions 会自动构建并部署到 Cloudflare Pages，
+约 1 分钟生效。也可以在仓库 **Actions → Deploy Hugo site to Cloudflare Pages
+→ Run workflow** 手动触发。
 
-```powershell
-git pull --rebase origin main
-git push -u origin main
-```
+当前已配置的仓库密钥：
 
-**② 配置 Actions 的 Secrets 与 Variables**（否则自动部署会失败）
-
-仓库 **Settings → Secrets and variables → Actions**：
-
-| 类型 | 名称 | 值 |
+| 类型 | 名称 | 状态 |
 |---|---|---|
-| Secret | `CLOUDFLARE_API_TOKEN` | 你的 Cloudflare API Token |
-| Secret | `CLOUDFLARE_ACCOUNT_ID` | `ed70a03909cfb104b44883190bab42d9` |
-| **Variable** | `BLOG_PROJECT_NAME` | `my-blog` |
+| Secret | `CLOUDFLARE_API_TOKEN` | ✅ 已配置 |
+| Secret | `CLOUDFLARE_ACCOUNT_ID` | ✅ 已配置 |
+| Variable | `BLOG_PROJECT_NAME` | ✅ `my-blog` |
 
-`BLOG_PROJECT_NAME` **必须是 Variable**，不是 Secret —— 工作流读的是
-`${{ vars.BLOG_PROJECT_NAME }}`，放进 Secrets 会读不到。
+> `BLOG_PROJECT_NAME` **必须是 Variable**，不是 Secret —— 工作流读的是
+> `${{ vars.BLOG_PROJECT_NAME }}`，放进 Secrets 会读不到。
 
-### 务必现在做：备份管理员密钥
+### ⚠️ 务必现在做：备份管理员密钥
 
 密钥已保存在本地 `.env`（已被 git 忽略），并已写入 Cloudflare 的
 `ADMIN_SECRET`。**Cloudflare 的密钥是只写的，写入后无法再读取**，
@@ -76,6 +73,16 @@ git push -u origin main
 ```powershell
 Get-Content C:\Users\Redmi\Codex\blog\.env
 ```
+
+### ⚠️ 另外建议：吊销对话中暴露过的凭据
+
+本次搭建过程中，Cloudflare API Token 和 GitHub Token 都在对话里出现过，
+建议部署稳定后到各自控制台**删除并重新生成**：
+
+- Cloudflare：My Profile → API Tokens → Roll / Delete
+- GitHub：Settings → Developer settings → Personal access tokens → Delete
+
+重新生成后，把新值更新到仓库 Secrets 即可，站点本身不受影响。
 
 审核评论：
 
