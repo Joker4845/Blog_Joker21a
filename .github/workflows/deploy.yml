@@ -25,9 +25,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Pulls in the theme, which is stored as a git submodule.
-          submodules: recursive
           # Ananke uses .GitInfo for "last modified" dates, which needs history.
+          # No submodules: the theme is vendored into themes/ananke/ and
+          # committed, so it is already present after checkout.
           fetch-depth: 0
 
       - name: Setup Hugo
@@ -41,6 +41,10 @@ jobs:
           extended: true
 
       - name: Build
+        # No `npm install` step on purpose: Ananke's CSS is self-contained and
+        # builds without node_modules (verified locally by building with the
+        # directory absent — identical output hash). Adding a needless install
+        # would only add a failure point.
         run: hugo --minify --gc
 
       - name: Deploy to Cloudflare Pages

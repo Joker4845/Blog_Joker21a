@@ -1,7 +1,7 @@
 # 部署手册（Windows → Cloudflare Pages）
 
-本仓库已经是一个完整的 Hugo 站点骨架。**只差需要联网 / 需要你账号权限的几步**，
-按下面的顺序执行即可上线。
+**博客已经上线，评论功能已接通。** 剩余工作只有「推送到 GitHub」和
+「配置 Actions 密钥」两步，见第 0 节。
 
 下面的命令都在 **PowerShell** 中运行，工作目录为仓库根目录
 （`C:\Users\Redmi\Codex\blog`）。
@@ -10,31 +10,79 @@
 
 ## 0. 当前状态
 
-**站点已经可以在本地构建和预览。** 实际验证结果：
+| 项目 | 值 |
+|---|---|
+| 线上地址 | <https://my-blog-t3l.pages.dev> |
+| Pages 项目名 | `my-blog` |
+| Cloudflare Account ID | `ed70a03909cfb104b44883190bab42d9` |
+| Ziscus Worker | `https://ziscus-comments.gentle-math-b39e.workers.dev` |
+| D1 数据库 | `ziscus-comments`（区域 WNAM，5 张表） |
+| GitHub 仓库 | <https://github.com/Joker4845/Blog_Joker21a> |
+| 本地 Hugo | 0.168.0 extended（`%USERPROFILE%\tools\hugo\`） |
+| 主题 | Ananke v2.19.1（随仓库提交，非 submodule） |
+
+实测结果：
 
 ```
-hugo v0.168.0+extended windows/amd64
-hugo --minify --gc    → 18 pages, exit 0, 无警告
-hugo server           → 首页 200 / 文章页 200 / 代码块正常
+hugo --minify --gc   → 18 pages, exit 0, 无警告
+线上首页/文章页      → HTTP 200
+线上评论表单         → 渲染正常，endpoint 与 slug 正确
+CSS 完整性校验       → SRI 哈希与页面声明一致
 ```
 
-已完成：
+> **域名注意**：Pages 项目在控制台叫 `my-blog`，但实际域名是
+> **`my-blog-t3l.pages.dev`** —— 因为 `my-blog` 子域已被他人占用。
+> 凡涉及域名的地方（`baseURL`、Ziscus 的 `ALLOWED_ORIGINS`）
+> 都必须用带 `-t3l` 的全名，否则提交评论会报 CORS 错误。
 
-- **Hugo 0.168.0 extended 已安装**到 `C:\Users\Redmi\tools\hugo\`，并写入用户 PATH
-- **Ananke v2.19.1 已安装**到 `themes\ananke\`（随仓库提交，非 submodule）
-- `hugo.toml` —— 站点配置（中文、标签/分类、评论区开关）
-- `layouts/_partials/commento.html` —— 覆盖主题的评论区（当前渲染为空）
-- `.gitattributes` —— 强制 LF + 二进制文件保护
-- `.gitignore` —— 排除 `public/`、`node_modules/`、密钥
-- `content/posts/hello.md` —— 示例文章
-- `.github/workflows/deploy.yml` —— 自动构建部署工作流
-- 本地 git 仓库已初始化，分支 `main`，`core.autocrlf=false`
+### 还剩两件事
 
-未完成（需要你的账号权限）：
+**① 推送到 GitHub**（需要你的凭据）
 
-- 创建 Cloudflare Pages 项目
-- 部署 Ziscus 评论系统
-- 推送到 GitHub 并配置 Secrets
+本地已有 3 个 commit、315 个文件，remote 已配置好，只差推送：
+
+```powershell
+cd C:\Users\Redmi\Codex\blog
+git push -u origin main
+```
+
+会弹出浏览器让你登录 GitHub 授权（Git Credential Manager）。授权后即完成。
+若仓库里已有内容（例如初始化时勾选了 README），先拉再推：
+
+```powershell
+git pull --rebase origin main
+git push -u origin main
+```
+
+**② 配置 Actions 的 Secrets 与 Variables**（否则自动部署会失败）
+
+仓库 **Settings → Secrets and variables → Actions**：
+
+| 类型 | 名称 | 值 |
+|---|---|---|
+| Secret | `CLOUDFLARE_API_TOKEN` | 你的 Cloudflare API Token |
+| Secret | `CLOUDFLARE_ACCOUNT_ID` | `ed70a03909cfb104b44883190bab42d9` |
+| **Variable** | `BLOG_PROJECT_NAME` | `my-blog` |
+
+`BLOG_PROJECT_NAME` **必须是 Variable**，不是 Secret —— 工作流读的是
+`${{ vars.BLOG_PROJECT_NAME }}`，放进 Secrets 会读不到。
+
+### 务必现在做：备份管理员密钥
+
+密钥已保存在本地 `.env`（已被 git 忽略），并已写入 Cloudflare 的
+`ADMIN_SECRET`。**Cloudflare 的密钥是只写的，写入后无法再读取**，
+所以请立刻复制到密码管理器：
+
+```powershell
+Get-Content C:\Users\Redmi\Codex\blog\.env
+```
+
+审核评论：
+
+```powershell
+cd C:\Users\Redmi\Codex\blog
+npx ziscus dashboard
+```
 
 ---
 
