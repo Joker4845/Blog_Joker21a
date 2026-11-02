@@ -4,7 +4,7 @@
 「配置 Actions 密钥」两步，见第 0 节。
 
 下面的命令都在 **PowerShell** 中运行，工作目录为仓库根目录
-（`C:\Users\Redmi\Codex\blog`）。
+（`C:\Users\Redmi\dsh\blog`）。
 
 ---
 
@@ -42,7 +42,7 @@ D1 读写              → 写入 changes:1，读回记录正常
 推送和 Actions 密钥都已配置好，**日常发布只剩写文章 + push**：
 
 ```powershell
-cd C:\Users\Redmi\Codex\blog
+cd C:\Users\Redmi\dsh\blog
 .\new-post.ps1 tech "文章标题" -Slug my-post   # 技术文章
 .\new-post.ps1 essays "随笔标题" -Slug my-note # 随笔
 ```
@@ -71,7 +71,7 @@ push 后 GitHub Actions 会自动构建并部署到 Cloudflare Pages，
 所以请立刻复制到密码管理器：
 
 ```powershell
-Get-Content C:\Users\Redmi\Codex\blog\.env
+Get-Content C:\Users\Redmi\dsh\blog\.env
 ```
 
 ### ⚠️ 另外建议：吊销对话中暴露过的凭据
@@ -87,7 +87,7 @@ Get-Content C:\Users\Redmi\Codex\blog\.env
 审核评论：
 
 ```powershell
-cd C:\Users\Redmi\Codex\blog
+cd C:\Users\Redmi\dsh\blog
 npx ziscus dashboard
 ```
 
